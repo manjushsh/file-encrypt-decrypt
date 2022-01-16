@@ -57,6 +57,7 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
 
                     const text = new Blob(file);
                     console.warn(text);
+                    alert("Hello");
                 }
                 break;
             default:
