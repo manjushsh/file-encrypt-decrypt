@@ -1,0 +1,12 @@
+.decrypt > #drop_zone {
+    border: 5px solid blue;
+    width:  200px;
+    height: 100px;
+  }
+
+  .encrypt > #drop_zone {
+    border: 5px solid red;
+    width:  200px;
+    height: 100px;
+  }
+  
