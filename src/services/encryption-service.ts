@@ -34,10 +34,18 @@ const EncryptionService = {
             name: algorithmType,
             iv: IV,
         };
-        const dataToDecrypt: ArrayBuffer = await encryptedBlobData.arrayBuffer();
-        const decryptedData: ArrayBuffer = await crypto.subtle.decrypt(algorithm, importedKey, dataToDecrypt);
+        // const dataToDecrypt: ArrayBuffer = await encryptedBlobData.arrayBuffer();
+        const decryptedData: ArrayBuffer = await crypto.subtle.decrypt(algorithm, importedKey, encryptedBlobData);
         return new Blob([decryptedData]);
     },
+    fileToJSON: async (file: any) => {
+        return new Promise((resolve, reject) => {
+            const fileReader: FileReader = new FileReader();
+            fileReader.onload = e => resolve(e?.target?.result);
+            fileReader.onerror = error => reject(error);
+            fileReader.readAsText(file);
+        })
+    }
 };
 
 export default EncryptionService;
