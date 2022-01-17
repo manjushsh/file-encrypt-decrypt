@@ -3,4 +3,8 @@ type algorithmObject = {
     iv: Uint8Array;
 };
 
-export type { algorithmObject };
+interface FileEncryptDecryptType {
+    [key: string]: string | algorithmObject | Uint8Array | CryptoKey | null | undefined;
+};
+
+export type { algorithmObject, FileEncryptDecryptType };
