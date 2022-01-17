@@ -15,22 +15,25 @@
   flex-direction: column;
   height: fit-content;
   margin: 5px;
+  text-align: center;
 }
 
 .encrypt {
   width: 100%;
-  border: 1px solid var(--color-red-bright);
+  border: 1px solid var(--color-red);
   height: 48vh;
 }
 
 .decrypt {
   width: 100%;
-  border: 1px solid var(--color-green-bright);
+  border: 1px solid var(--color-green);
   height: 48vh;
+  margin-top: 10px;
 }
 
 .key-file {
   width: 100%;
-  border: 1px solid var(--color-green-bright);
+  border: 1px solid var(--color-green);
   height: 48vh;
+  margin-top: 10px;
 }

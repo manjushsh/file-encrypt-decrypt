@@ -1,8 +1,17 @@
-:root{
+:root {
   /* Variable definations */
   /* type-name-optional */
-  --color-red-bright: #FF0000;
-  --color-green-bright: green;
+  --color-red: #FF0000;
+  --color-green: green;
+  --background-color: #FFF;
+  --text-color: #000;
+}
+
+.dark {
+  --color-red: #ff4b4b;
+  --color-green: rgb(81, 255, 81);
+  --background-color: rgb(19, 14, 14);
+  --text-color: #FFF;
 }
 
 .centered-flex-container {
@@ -20,6 +29,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 code {

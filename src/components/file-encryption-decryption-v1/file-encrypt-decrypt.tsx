@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import DownloadService from '../../services/download-service';
 import EncryptionService from '../../services/encryption-service';
 import { FileEncryptDecryptType } from '../../types';
-import '../../css/file-encrypt-decrypt.css';
 import BarLoader from '../common/loader';
+import '../../css/index.css';
+import '../../css/file-encrypt-decrypt.css';
 
 const commonFileOperations = async (file: any) => {
     const blobOfFile: Blob = new Blob([file]);
@@ -102,7 +103,7 @@ const FileEncryptDecrypt = () => {
 
     return (
         <>
-            <div className="file-ed-container">
+            <div className="file-ed-container dark">
                 {!encrytionParameters?.keyFileUploaded ?
                     (<section className="file-input encrypt">
                         <div id="drop_zone" className='encrypt' onDrop={e => {
