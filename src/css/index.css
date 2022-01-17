@@ -1,3 +1,18 @@
+:root{
+  /* Variable definations */
+  /* type-name-optional */
+  --color-red-bright: #FF0000;
+  --color-green-bright: green;
+}
+
+.centered-flex-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* height: 100%; */
+}
+
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

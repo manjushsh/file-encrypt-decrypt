@@ -1,12 +1,36 @@
-.decrypt > #drop_zone {
-    border: 5px solid blue;
-    width:  200px;
-    height: 100px;
-  }
+/* .decrypt>#drop_zone {
+  border: 5px solid blue;
+  width: 200px;
+  height: 100px;
+}
 
-  .encrypt > #drop_zone {
-    border: 5px solid red;
-    width:  200px;
-    height: 100px;
-  }
-  
+.encrypt>#drop_zone {
+  border: 5px solid red;
+  width: 200px;
+  height: 100px;
+} */
+
+.file-ed-container {
+  display: flex;
+  flex-direction: column;
+  height: fit-content;
+  margin: 5px;
+}
+
+.encrypt {
+  width: 100%;
+  border: 1px solid var(--color-red-bright);
+  height: 48vh;
+}
+
+.decrypt {
+  width: 100%;
+  border: 1px solid var(--color-green-bright);
+  height: 48vh;
+}
+
+.key-file {
+  width: 100%;
+  border: 1px solid var(--color-green-bright);
+  height: 48vh;
+}
