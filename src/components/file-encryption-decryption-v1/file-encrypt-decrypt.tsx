@@ -23,7 +23,7 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
                     // If dropped items aren't files, reject them
                     if (ev.dataTransfer.items[i].kind === 'file') {
                         const file = ev.dataTransfer.items[i].getAsFile();
-                        const arrayBuffer = commonFileOperations(file);
+                        const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
                         const { blob, iv, savableKey } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
                         const JSONBlob: Blob = new Blob([JSON.stringify({ iv, key: savableKey })], {
                             type: 'application/json'
@@ -34,29 +34,27 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
                 }
                 break;
             case 'decrypt':
-                setEncryptionParameters({ algorithm: null, IV: null, key: null, });
-                for (let i = 0; i < ev.dataTransfer.items.length; i++) {
-                    // If dropped items aren't files, reject them
-                    if (ev.dataTransfer.items[i].kind === 'file') {
-                        const file = ev.dataTransfer.items[i].getAsFile();
-                        const arrayBuffer = commonFileOperations(file);
-                        const { blob, iv, savableKey } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
-                        const JSONBlob: Blob = new Blob([JSON.stringify({ iv, key: savableKey })], {
-                            type: 'application/json'
-                        });
-                        DownloadService.downloadBlob(JSONBlob, `key-${file.name}.json`);
-                        DownloadService.downloadBlob(blob, "encrypted.jpg");
-                        console.log('... file[' + i + '].name = ' + file.name);
+                // setEncryptionParameters({ algorithm: null, IV: null, key: null, });
+                console.warn("encrytionParameters ", encrytionParameters);
+                if (encrytionParameters.algorithm && encrytionParameters.IV) {
+                    for (let i = 0; i < ev.dataTransfer.items.length; i++) {
+                        // If dropped items aren't files, reject them
+                        if (ev.dataTransfer.items[i].kind === 'file') {
+                            const file = ev.dataTransfer.items[i].getAsFile();
+                            const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+                            const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, encrytionParameters.IV, encrytionParameters.key);
+                            DownloadService.downloadBlob(blob, `decrypted-${file.name}`);
+                        }
                     }
                 }
                 break;
             case 'key-file':
                 if (ev.dataTransfer.items[0].kind === 'file') {
                     const file = ev.dataTransfer.items[0].getAsFile();
-                    console.warn(file);
-
-                    const text = new Blob(file);
-                    console.warn(text);
+                    const data: any = await EncryptionService.fileToJSON(file);
+                    const keyFile = JSON.parse(data);
+                    setEncryptionParameters({ ...keyFile });
+                    console.warn("Data: ", data);
                 }
                 break;
             default:
