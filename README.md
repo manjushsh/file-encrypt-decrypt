@@ -4,4 +4,5 @@ Encrypt and Decrypt your files easily!
 
 - API reference: <https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto>
 - Browser compatibility (Most browsers supported): <https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto#browser_compatibility>
+- Encryption: AES-GCM <https://vibornoff.github.io/webcrypto-examples/index.html>
 - Hosted URL: Coming Soon!
