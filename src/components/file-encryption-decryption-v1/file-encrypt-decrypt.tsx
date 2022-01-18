@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import '../../css/file-encrypt-decrypt.css';
 import DownloadService from '../../services/download-service';
 import EncryptionService from '../../services/encryption-service';
+import { FileEncryptDecryptType } from '../../types';
+import BarLoader from '../common/loader';
+import '../../css/index.css';
+import '../../css/file-encrypt-decrypt.css';
 
 const commonFileOperations = async (file: any) => {
     const blobOfFile: Blob = new Blob([file]);
@@ -22,10 +25,13 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
                     if (ev.dataTransfer.items[i].kind === 'file') {
                         const file = ev.dataTransfer.items[i].getAsFile();
                         const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+                        setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
                         const { blob, iv, savableKey } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
+                        setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false });
                         const JSONBlob: Blob = new Blob([JSON.stringify({ iv, key: savableKey })], {
                             type: 'application/json'
                         });
+                        setEncryptionParameters({ ...encrytionParameters, keyFileUploaded: false });
                         DownloadService.downloadBlob(JSONBlob, `key-${file.name}.json`);
                         DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
                     }
@@ -40,8 +46,11 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
                         if (ev.dataTransfer.items[i].kind === 'file') {
                             const file = ev.dataTransfer.items[i].getAsFile();
                             const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+                            setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
                             const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, encrytionParameters.key);
-                            DownloadService.downloadBlob(blob, `decrypted-${file.name}`);
+                            setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false });
+                            const fileName = file?.name?.startsWith('encrypted') ? file.name.replace(/encrypted-/i, '') : file.name;
+                            DownloadService.downloadBlob(blob, `${fileName}`);
                         }
                     }
                 }
@@ -49,9 +58,17 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
             case 'key-file':
                 if (ev.dataTransfer.items[0].kind === 'file') {
                     const file = ev.dataTransfer.items[0].getAsFile();
-                    const data: any = await EncryptionService.fileToJSON(file);
-                    const keyFile = JSON.parse(data);
-                    setEncryptionParameters({ ...keyFile });
+                    if (file.type === "application/json") {
+                        const data: any = await EncryptionService.fileToJSON(file);
+                        const keyFile = JSON.parse(data);
+                        if (keyFile.iv && keyFile.key)
+                            setEncryptionParameters({ ...keyFile, keyFileUploaded: true });
+                        else
+                            alert("Uploaded JSON is not an valid key file!");
+                    }
+                    else {
+                        alert("Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file");
+                    }
                 }
                 break;
             default:
@@ -72,7 +89,11 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
 const dragOverHandler = (ev: any) => ev.preventDefault();
 
 const FileEncryptDecrypt = () => {
-    const [encrytionParameters, setEncryptionParameters] = useState({});
+    const defaultState: FileEncryptDecryptType = {
+        fileEncryptionLoader: false,
+        fileDecryptionLoader: false,
+    };
+    const [encrytionParameters, setEncryptionParameters] = useState(defaultState);
     useEffect(() => { fetchAndSetParameters() }, []);
 
     const fetchAndSetParameters = async () => {
@@ -82,28 +103,37 @@ const FileEncryptDecrypt = () => {
 
     return (
         <>
-            <div className="container">
-                <section className="file-input encrypt">
-                    <div id="drop_zone" className='encrypt' onDrop={e => {
-                        e.preventDefault();
-                        dropHandler(e, 'encrypt', encrytionParameters, setEncryptionParameters);
-                    }} onDragOver={dragOverHandler}>
-                        <p>Drag one or more files Start Encryption ...</p>
-                    </div>
-                </section>
-                <section className='file-input decrypt'>
-                    <div id="drop_zone" className='decrypt' onDrop={e => {
-                        e.preventDefault();
-                        dropHandler(e, 'decrypt', encrytionParameters, setEncryptionParameters);
-                    }} onDragOver={dragOverHandler}>
-                        <p>Drag one or more files and a key file to Start Decrytion ...</p>
-                    </div>
+            <div className="file-ed-container dark">
+                {!encrytionParameters?.keyFileUploaded ?
+                    (<section className="file-input encrypt">
+                        <div id="drop_zone" className='encrypt' onDrop={e => {
+                            e.preventDefault();
+                            dropHandler(e, 'encrypt', encrytionParameters, setEncryptionParameters);
+                        }} onDragOver={dragOverHandler}>
+                            {
+                                !encrytionParameters.fileEncryptionLoader ?
+                                    (<p className='file-title'>{'Drag one or more files Start Encryption ...'}</p>) : <BarLoader />
+                            }
+                        </div>
+                    </section>)
+                    : ''
+                }
+                <section className='file-input'>
+                    {
+                        encrytionParameters?.keyFileUploaded ?
+                            (<div id="drop_zone" className='decrypt' onDrop={e => {
+                                e.preventDefault();
+                                dropHandler(e, 'decrypt', encrytionParameters, setEncryptionParameters);
+                            }} onDragOver={dragOverHandler}>
+                                <p className='file-title'>{'Drag one or more files to Start Decrytion ...'}</p>
+                            </div>) : ''
+                    }
 
-                    <div id="drop_zone" className='decrypt' onDrop={e => {
+                    <div id="drop_zone" className='key-file' onDrop={e => {
                         e.preventDefault();
                         dropHandler(e, 'key-file', encrytionParameters, setEncryptionParameters);
                     }} onDragOver={dragOverHandler}>
-                        <p>Drop key file here..</p>
+                        <p className='file-title'>{encrytionParameters?.keyFileUploaded ? 'Key Uploaded. Upload encrypted file in decryption section.' : 'Drop key file here to initiate Decryption menu..'}</p>
                     </div>
                 </section>
             </div>
