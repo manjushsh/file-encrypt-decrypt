@@ -1,3 +1,5 @@
+[![CodeQL](https://github.com/manjushsh/file-encrypt-decrypt/actions/workflows/codeql.yml/badge.svg?branch=test%2Fci-cd)](https://github.com/manjushsh/file-encrypt-decrypt/actions/workflows/codeql.yml)
+
 # Browser based File encryption and decryption using SubtleCrypto API
 
 Encrypt and Decrypt your files easily!
