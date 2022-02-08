@@ -112,7 +112,7 @@ const FileEncryptDecrypt = () => {
                         }} onDragOver={dragOverHandler}>
                             {
                                 !encrytionParameters.fileEncryptionLoader ?
-                                    (<p className='file-title'>{'Drag one or more files Start Encryption ...'}</p>) : <BarLoader />
+                                    (<p className='file-title'>{'Drag and drop a file here start Encryption ...'}</p>) : <BarLoader />
                             }
                         </div>
                     </section>)
@@ -125,7 +125,7 @@ const FileEncryptDecrypt = () => {
                                 e.preventDefault();
                                 dropHandler(e, 'decrypt', encrytionParameters, setEncryptionParameters);
                             }} onDragOver={dragOverHandler}>
-                                <p className='file-title'>{'Drag one or more files to Start Decrytion ...'}</p>
+                                <p className='file-title'>{'Drag and drop a file here start Decryption ...'}</p>
                             </div>) : ''
                     }
 
