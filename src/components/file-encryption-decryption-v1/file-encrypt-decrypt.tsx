@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode"
 import DownloadService from "../../services/download-service";
 import EncryptionService from "../../services/encryption-service";
 import { FileEncryptDecryptType } from "../../types";
@@ -13,6 +14,19 @@ declare global {
   }
 }
 const { QRCode } = window;
+const scanImageQR = (imageFile: File) => {
+  const html5QrCode = new Html5Qrcode("qrcode"); // id of section
+  // Scan QR Code
+  html5QrCode.scanFile(imageFile, false)
+    .then(decodedText => {
+      // success, use decodedText
+      console.log(decodedText);
+    })
+    .catch(err => {
+      // failure, handle it.
+      console.log(`Error scanning file. Reason: ${err}`)
+    });
+};
 
 const getNewQRCodeObject = () => {
   const name = "qrcode";
@@ -119,7 +133,14 @@ const dropHandler = async (
             if (keyFile.iv && keyFile.key)
               setEncryptionParameters({ ...keyFile, keyFileUploaded: true });
             else alert("Uploaded JSON is not an valid key file!");
-          } else {
+          }
+          else if (file.type === "image/png") {
+            // const base64 = await DownloadService.fileToBase64(file);
+            const decodedQRData = await scanImageQR(file);
+            console.warn("file ", decodedQRData);
+
+          }
+          else {
             alert(
               "Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file"
             );
