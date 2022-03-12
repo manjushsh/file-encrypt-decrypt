@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode"
 import DownloadService from "../../services/download-service";
 import EncryptionService from "../../services/encryption-service";
 import { FileEncryptDecryptType } from "../../types";
@@ -7,6 +6,8 @@ import BarLoader from "../common/loader";
 import ConfigService from "../../services/config-service";
 import "../../css/index.css";
 import "../../css/file-encrypt-decrypt.css";
+// @ts-ignore
+import QrCode from 'qrcode-reader'
 
 declare global {
   interface Window {
@@ -14,18 +15,14 @@ declare global {
   }
 }
 const { QRCode } = window;
-const scanImageQR = (imageFile: File) => {
-  const html5QrCode = new Html5Qrcode("qrcode"); // id of section
+const scanImageQR = async (imageFile: File) => {
+  const base64 = await DownloadService.fileToBase64(imageFile);
+  const qr = new QrCode();
+  // const imageNode = document.getElementById("qrcode-img");
+  const code = await qr.decode(base64);
+  console.warn(code);
   // Scan QR Code
-  html5QrCode.scanFile(imageFile, false)
-    .then(decodedText => {
-      // success, use decodedText
-      console.log(decodedText);
-    })
-    .catch(err => {
-      // failure, handle it.
-      console.log(`Error scanning file. Reason: ${err}`)
-    });
+
 };
 
 const getNewQRCodeObject = () => {
@@ -134,12 +131,14 @@ const dropHandler = async (
               setEncryptionParameters({ ...keyFile, keyFileUploaded: true });
             else alert("Uploaded JSON is not an valid key file!");
           }
-          else if (file.type === "image/png") {
-            // const base64 = await DownloadService.fileToBase64(file);
-            const decodedQRData = await scanImageQR(file);
-            console.warn("file ", decodedQRData);
+          // else if (file.type === "image/png") {
+          //   // const base64 = await DownloadService.fileToBase64(file);
+          //   const image = document.getElementById("qrcode-img")! as HTMLImageElement;
+          //   image.src = URL.createObjectURL(file);
+          //   const decodedQRData = await scanImageQR(file);
+          //   console.warn("file ", decodedQRData);
 
-          }
+          // }
           else {
             alert(
               "Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file"
@@ -257,7 +256,7 @@ const FileEncryptDecrypt = () => {
             </p>
           </div>
         </section>
-        <section className="qrcode" id="qrcode"></section>
+        <section className="qrcode" id="qrcode"><img id="qrcode-img" alt="" /></section>
       </div>
     </>
   );
