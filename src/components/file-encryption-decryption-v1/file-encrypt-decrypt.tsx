@@ -7,7 +7,7 @@ import ConfigService from "../../services/config-service";
 import "../../css/index.css";
 import "../../css/file-encrypt-decrypt.css";
 // @ts-ignore
-import QrCode from 'qrcode-reader'
+// import QrCode from 'qrcode-reader'
 
 declare global {
   interface Window {
@@ -15,15 +15,15 @@ declare global {
   }
 }
 const { QRCode } = window;
-const scanImageQR = async (imageFile: File) => {
-  const base64 = await DownloadService.fileToBase64(imageFile);
-  const qr = new QrCode();
-  // const imageNode = document.getElementById("qrcode-img");
-  const code = await qr.decode(base64);
-  console.warn(code);
-  // Scan QR Code
+// const scanImageQR = async (imageFile: File) => {
+//   const base64 = await DownloadService.fileToBase64(imageFile);
+//   const qr = new QrCode();
+//   // const imageNode = document.getElementById("qrcode-img");
+//   const code = await qr.decode(base64);
+//   console.warn(code);
+//   // Scan QR Code
 
-};
+// };
 
 const getNewQRCodeObject = () => {
   const name = "qrcode";
