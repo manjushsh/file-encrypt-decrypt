@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import JSZip from 'jszip';
 import DownloadService from "../../services/download-service";
 import EncryptionService from "../../services/encryption-service";
 import { FileEncryptDecryptType, KeyExportTypes } from "../../types";
@@ -14,6 +15,7 @@ declare global {
     QRCode: any;
   }
 }
+const zip = new JSZip();
 const { QRCode } = window;
 // const scanImageQR = async (imageFile: File) => {
 //   const base64 = await DownloadService.fileToBase64(imageFile);
@@ -65,12 +67,16 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
             const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
             setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
             const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
-            DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
+            zip.file(file.name, blob);
+            // DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
             setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
           }
         }
         const exportedKey = await EncryptionService.exportKeyAsJWT(key);
         downloadFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
+        zip.generateAsync({ ...ConfigService.ZIP_CONFIG, type: "base64" }).then(content => {
+          window.location.href = "data:application/zip;base64," + content;
+        });
         break;
       case "decrypt":
         // setEncryptionParameters({ algorithm: null, IV: null, key: null, });

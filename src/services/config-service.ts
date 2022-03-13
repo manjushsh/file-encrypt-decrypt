@@ -5,6 +5,13 @@ const ConfigService = {
     colorDark: "#000000",
     colorLight: "#ffffff",
   },
+  ZIP_CONFIG: {
+    // compression: "DEFLATE",
+    type: "base64",
+    compressionOptions: {
+      level: 6
+    }
+  },
 };
 
 export default ConfigService;

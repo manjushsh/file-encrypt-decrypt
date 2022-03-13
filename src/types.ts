@@ -3,7 +3,11 @@ type algorithmObject = {
     iv: Uint8Array;
 };
 
-type KeyExportTypes = { algorithm: string, iv: string, key: JsonWebKey }
+type KeyExportTypes = { 
+    algorithm: string, 
+    iv: string, 
+    key: JsonWebKey
+};
 
 interface FileEncryptDecryptType {
     [key: string]: string | algorithmObject | Uint8Array | CryptoKey | boolean | null | undefined;
