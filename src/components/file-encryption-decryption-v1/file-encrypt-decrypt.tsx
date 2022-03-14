@@ -1,18 +1,31 @@
 import { useEffect, useState } from "react";
+import JSZip from 'jszip';
 import DownloadService from "../../services/download-service";
 import EncryptionService from "../../services/encryption-service";
-import { FileEncryptDecryptType } from "../../types";
+import { FileEncryptDecryptType, KeyExportTypes } from "../../types";
 import BarLoader from "../common/loader";
 import ConfigService from "../../services/config-service";
 import "../../css/index.css";
 import "../../css/file-encrypt-decrypt.css";
+// @ts-ignore
+// import QrCode from 'qrcode-reader'
 
 declare global {
   interface Window {
     QRCode: any;
   }
 }
+const zip = new JSZip();
 const { QRCode } = window;
+// const scanImageQR = async (imageFile: File) => {
+//   const base64 = await DownloadService.fileToBase64(imageFile);
+//   const qr = new QrCode();
+//   // const imageNode = document.getElementById("qrcode-img");
+//   const code = await qr.decode(base64);
+//   console.warn(code);
+//   // Scan QR Code
+
+// };
 
 const getNewQRCodeObject = () => {
   const name = "qrcode";
@@ -28,57 +41,62 @@ const commonFileOperations = async (file: any) => {
   return arrayBuffer;
 };
 
+const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
+  const JSONToExport = JSON.stringify({ algorithm, iv, key: key });
+  const QR_CODE = getNewQRCodeObject();
+  QR_CODE.makeCode(JSONToExport);
+  const dataUrl = document.getElementById('qrcode')?.querySelector('canvas')?.toDataURL() || '';
+  const dateNow = Date.now();
+  DownloadService.downloadURI(dataUrl, `qrcode-key-${dateNow}`);
+  const JSONBlob: Blob = new Blob([JSONToExport], { type: "application/json" });
+  DownloadService.downloadBlob(JSONBlob, `key-${dateNow}.json`);
+}
+
+const encryptionOperations = async ({ file, encrytionParameters, setEncryptionParameters }: any) => {
+  const { algorithm, IV, key } = encrytionParameters;
+  const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
+  const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
+  zip.file(file.name, blob);
+  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
+};
+
+const pickFile = ({ isMulti = true, acceptTypes = "*" }) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = isMulti;
+  input.accept = acceptTypes;
+  input.onchange = e => {
+    // getting a hold of the file reference
+    const files = (e.target as HTMLInputElement)?.files!;
+    if (files && files.length > 0) {
+
+    }
+  }
+  input.click();
+};
+
 // Drag and Drop Events. MDN Ref: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
-const dropHandler = async (
-  ev: any,
-  type: string,
-  encrytionParameters: any,
-  setEncryptionParameters: any
-) => {
+const dropHandler = async (ev: any, type: string, encrytionParameters: any, setEncryptionParameters: any) => {
   ev.preventDefault();
   if (ev.dataTransfer.items) {
     // Use DataTransferItemList interface to access the file(s)
     switch (type) {
       case "encrypt":
-        const { algorithm, IV, key } = encrytionParameters;
         for (let i = 0; i < ev.dataTransfer.items.length; i++) {
           // If dropped items aren't files, reject them
           if (ev.dataTransfer.items[i].kind === "file") {
             const file = ev.dataTransfer.items[i].getAsFile();
-            const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
-            setEncryptionParameters({
-              ...encrytionParameters,
-              fileEncryptionLoader: true,
-            });
-            const { blob, iv, savableKey } =
-              await EncryptionService.encryptFileUsingAlgorithm(
-                arrayBuffer,
-                algorithm,
-                IV,
-                key
-              );
-            setEncryptionParameters({
-              ...encrytionParameters,
-              fileEncryptionLoader: false,
-            });
-            const JSONToExport = JSON.stringify({ iv, key: savableKey });
-
-            const QR_CODE = getNewQRCodeObject();
-            QR_CODE.makeCode(JSONToExport);
-            const dataUrl = document.getElementById('qrcode')!.querySelector('img')!.src;
-            DownloadService.downloadURI(dataUrl, `qrcode-key-${file.name}`);
-
-            const JSONBlob: Blob = new Blob([JSONToExport], {
-              type: "application/json",
-            });
-            setEncryptionParameters({
-              ...encrytionParameters,
-              keyFileUploaded: false,
-            });
-            DownloadService.downloadBlob(JSONBlob, `key-${file.name}.json`);
-            DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
+            await encryptionOperations({ file, encrytionParameters, setEncryptionParameters });
+            // DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
           }
         }
+        const { algorithm, IV, key } = encrytionParameters;
+        const exportedKey = await EncryptionService.exportKeyAsJWT(key);
+        downloadFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
+        zip.generateAsync({ ...ConfigService.ZIP_CONFIG, type: "base64" }).then(content => {
+          window.location.href = "data:application/zip;base64," + content;
+        });
         break;
       case "decrypt":
         // setEncryptionParameters({ algorithm: null, IV: null, key: null, });
@@ -89,23 +107,11 @@ const dropHandler = async (
             if (ev.dataTransfer.items[i].kind === "file") {
               const file = ev.dataTransfer.items[i].getAsFile();
               const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
-              setEncryptionParameters({
-                ...encrytionParameters,
-                fileEncryptionLoader: true,
-              });
-              const blob = await EncryptionService.decryptUploadedFile(
-                arrayBuffer,
-                iv,
-                encrytionParameters.key
-              );
-              setEncryptionParameters({
-                ...encrytionParameters,
-                fileEncryptionLoader: false,
-              });
-              const fileName = file?.name?.startsWith("encrypted")
-                ? file.name.replace(/encrypted-/i, "")
-                : file.name;
+              setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
+              const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, encrytionParameters.key);
+              const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
               DownloadService.downloadBlob(blob, `${fileName}`);
+              setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false });
             }
           }
         }
@@ -119,7 +125,16 @@ const dropHandler = async (
             if (keyFile.iv && keyFile.key)
               setEncryptionParameters({ ...keyFile, keyFileUploaded: true });
             else alert("Uploaded JSON is not an valid key file!");
-          } else {
+          }
+          // else if (file.type === "image/png") {
+          //   // const base64 = await DownloadService.fileToBase64(file);
+          //   const image = document.getElementById("qrcode-img")! as HTMLImageElement;
+          //   image.src = URL.createObjectURL(file);
+          //   const decodedQRData = await scanImageQR(file);
+          //   console.warn("file ", decodedQRData);
+
+          // }
+          else {
             alert(
               "Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file"
             );
@@ -236,7 +251,7 @@ const FileEncryptDecrypt = () => {
             </p>
           </div>
         </section>
-        <section className="qrcode" id="qrcode"></section>
+        <section className="qrcode" id="qrcode"><img id="qrcode-img" alt="" /></section>
       </div>
     </>
   );
