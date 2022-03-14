@@ -52,6 +52,30 @@ const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
   DownloadService.downloadBlob(JSONBlob, `key-${dateNow}.json`);
 }
 
+const encryptionOperations = async ({ file, encrytionParameters, setEncryptionParameters }: any) => {
+  const { algorithm, IV, key } = encrytionParameters;
+  const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
+  const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
+  zip.file(file.name, blob);
+  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
+};
+
+const pickFile = ({ isMulti = true, acceptTypes = "*" }) => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = isMulti;
+  input.accept = acceptTypes;
+  input.onchange = e => {
+    // getting a hold of the file reference
+    const files = (e.target as HTMLInputElement)?.files!;
+    if (files && files.length > 0) {
+
+    }
+  }
+  input.click();
+};
+
 // Drag and Drop Events. MDN Ref: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
 const dropHandler = async (ev: any, type: string, encrytionParameters: any, setEncryptionParameters: any) => {
   ev.preventDefault();
@@ -59,19 +83,15 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
     // Use DataTransferItemList interface to access the file(s)
     switch (type) {
       case "encrypt":
-        const { algorithm, IV, key } = encrytionParameters;
         for (let i = 0; i < ev.dataTransfer.items.length; i++) {
           // If dropped items aren't files, reject them
           if (ev.dataTransfer.items[i].kind === "file") {
             const file = ev.dataTransfer.items[i].getAsFile();
-            const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
-            setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
-            const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
-            zip.file(file.name, blob);
+            await encryptionOperations({ file, encrytionParameters, setEncryptionParameters });
             // DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
-            setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
           }
         }
+        const { algorithm, IV, key } = encrytionParameters;
         const exportedKey = await EncryptionService.exportKeyAsJWT(key);
         downloadFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
         zip.generateAsync({ ...ConfigService.ZIP_CONFIG, type: "base64" }).then(content => {
