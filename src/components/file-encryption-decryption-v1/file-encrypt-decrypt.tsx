@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import JSZip from 'jszip';
 import DownloadService from "../../services/download-service";
 import EncryptionService from "../../services/encryption-service";
-import { FileEncryptDecryptType, KeyExportTypes } from "../../types";
+import { FileEncryptDecryptType, KeyExportTypes, PostEncryptDecryptTypes } from "../../types";
 import BarLoader from "../common/loader";
 import ConfigService from "../../services/config-service";
 import "../../css/index.css";
@@ -15,7 +15,6 @@ declare global {
     QRCode: any;
   }
 }
-const zip = new JSZip();
 const { QRCode } = window;
 // const scanImageQR = async (imageFile: File) => {
 //   const base64 = await DownloadService.fileToBase64(imageFile);
@@ -41,7 +40,7 @@ const commonFileOperations = async (file: any) => {
   return arrayBuffer;
 };
 
-const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
+const downloadEncryptionFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
   const JSONToExport = JSON.stringify({ algorithm, iv, key: key });
   const QR_CODE = getNewQRCodeObject();
   QR_CODE.makeCode(JSONToExport);
@@ -52,25 +51,67 @@ const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
   DownloadService.downloadBlob(JSONBlob, `key-${dateNow}.json`);
 }
 
-const encryptionOperations = async ({ file, encrytionParameters, setEncryptionParameters }: any) => {
+const encryptionOperations = async ({ file, encrytionParameters, zip }: any) => {
   const { algorithm, IV, key } = encrytionParameters;
   const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
-  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
   const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
   zip.file(file.name, blob);
-  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
 };
 
-const pickFile = ({ isMulti = true, acceptTypes = "*" }) => {
+const postEncryptionOperations = async ({ encrytionParameters, setEncryptionParameters, zip }: PostEncryptDecryptTypes) => {
+  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
+  const { algorithm, IV, key } = encrytionParameters;
+  const exportedKey = await EncryptionService.exportKeyAsJWT(key);
+  downloadEncryptionFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
+  zip.generateAsync({type: "base64", compression: "DEFLATE"}).then(content => {
+    window.location.href = "data:application/zip;base64," + content;
+  });
+}
+
+const decryptionOperations = async ({ file, iv, encrytionParameters, zip }: any) => {
+  const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+  const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, encrytionParameters.key);
+  const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
+  zip.file(fileName, blob);
+  return zip;
+  // DownloadService.downloadBlob(blob, `${fileName}`);
+}
+
+const postDecryptionOperations = async ({ encrytionParameters, setEncryptionParameters, zip }: PostEncryptDecryptTypes) => {
+  setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
+  await zip.generateAsync({type: "base64", compression: "DEFLATE"}).then(content => {
+    window.location.href = "data:application/zip;base64," + content;
+  });
+}
+
+const pickFile = ({ isMulti = true, acceptTypes = "*", type = 'encrypt', encrytionParameters, setEncryptionParameters }: any) => {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = isMulti;
   input.accept = acceptTypes;
-  input.onchange = e => {
+  input.onchange = async (e) => {
+    const zip = new JSZip();
+    e.preventDefault();
     // getting a hold of the file reference
-    const files = (e.target as HTMLInputElement)?.files!;
+    const files = Array.from((e.target as HTMLInputElement)?.files!);
     if (files && files.length > 0) {
-
+      switch (type) {
+        case "encrypt":
+          setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
+          files.forEach(async (file) => {
+            await encryptionOperations({ file, encrytionParameters, zip });
+          });
+          await postEncryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
+          break;
+        case "decrypt":
+          const iv: any = encrytionParameters.iv || encrytionParameters.IV;
+          setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
+          files.forEach(async (file) => {
+            await decryptionOperations({ file, iv, encrytionParameters, zip });
+          });
+          await postDecryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
+          break;
+      }
     }
   }
   input.click();
@@ -80,40 +121,35 @@ const pickFile = ({ isMulti = true, acceptTypes = "*" }) => {
 const dropHandler = async (ev: any, type: string, encrytionParameters: any, setEncryptionParameters: any) => {
   ev.preventDefault();
   if (ev.dataTransfer.items) {
+    const zip = new JSZip();
     // Use DataTransferItemList interface to access the file(s)
     switch (type) {
       case "encrypt":
-        for (let i = 0; i < ev.dataTransfer.items.length; i++) {
-          // If dropped items aren't files, reject them
-          if (ev.dataTransfer.items[i].kind === "file") {
-            const file = ev.dataTransfer.items[i].getAsFile();
-            await encryptionOperations({ file, encrytionParameters, setEncryptionParameters });
-            // DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
+        if (ev?.dataTransfer?.items) {
+          setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
+          for (let i = 0; i < ev.dataTransfer.items.length; i++) {
+            // If dropped items aren't files, reject them
+            if (ev.dataTransfer.items[i].kind === "file") {
+              const file = ev.dataTransfer.items[i].getAsFile();
+              await encryptionOperations({ file, encrytionParameters, setEncryptionParameters, zip });
+            }
           }
         }
-        const { algorithm, IV, key } = encrytionParameters;
-        const exportedKey = await EncryptionService.exportKeyAsJWT(key);
-        downloadFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
-        zip.generateAsync({ ...ConfigService.ZIP_CONFIG, type: "base64" }).then(content => {
-          window.location.href = "data:application/zip;base64," + content;
-        });
+        await postEncryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
         break;
       case "decrypt":
         // setEncryptionParameters({ algorithm: null, IV: null, key: null, });
         const iv: any = encrytionParameters.iv || encrytionParameters.IV;
         if (encrytionParameters.key && iv) {
+          setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
           for (let i = 0; i < ev.dataTransfer.items.length; i++) {
             // If dropped items aren't files, reject them
             if (ev.dataTransfer.items[i].kind === "file") {
               const file = ev.dataTransfer.items[i].getAsFile();
-              const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
-              setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
-              const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, encrytionParameters.key);
-              const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
-              DownloadService.downloadBlob(blob, `${fileName}`);
-              setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false });
+              await decryptionOperations({ file, iv, encrytionParameters, setEncryptionParameters, zip });
             }
           }
+          await postDecryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
         }
         break;
       case "key-file":
@@ -151,9 +187,7 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
   } else {
     // Use DataTransfer interface to access the file(s)
     for (let i = 0; i < ev.dataTransfer.files.length; i++) {
-      console.log(
-        "... file[" + i + "].name = " + ev.dataTransfer.files[i].name
-      );
+      console.log("... file[" + i + "].name = " + ev.dataTransfer.files[i].name);
     }
   }
 };
@@ -185,14 +219,10 @@ const FileEncryptDecrypt = () => {
               className="encrypt"
               onDrop={(e) => {
                 e.preventDefault();
-                dropHandler(
-                  e,
-                  "encrypt",
-                  encrytionParameters,
-                  setEncryptionParameters
-                );
+                dropHandler(e, "encrypt", encrytionParameters, setEncryptionParameters);
               }}
               onDragOver={dragOverHandler}
+              onClick={() => pickFile({ isMulti: true, encrytionParameters, setEncryptionParameters })}
             >
               {!encrytionParameters.fileEncryptionLoader ? (
                 <p className="file-title">
@@ -213,12 +243,7 @@ const FileEncryptDecrypt = () => {
               className="decrypt"
               onDrop={(e) => {
                 e.preventDefault();
-                dropHandler(
-                  e,
-                  "decrypt",
-                  encrytionParameters,
-                  setEncryptionParameters
-                );
+                dropHandler(e, "decrypt", encrytionParameters, setEncryptionParameters);
               }}
               onDragOver={dragOverHandler}
             >

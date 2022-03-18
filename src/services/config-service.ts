@@ -6,10 +6,10 @@ const ConfigService = {
     colorLight: "#ffffff",
   },
   ZIP_CONFIG: {
-    // compression: "DEFLATE",
     type: "base64",
+    compression: "DEFLATE",
     compressionOptions: {
-      level: 6
+      level: 9
     }
   },
 };
