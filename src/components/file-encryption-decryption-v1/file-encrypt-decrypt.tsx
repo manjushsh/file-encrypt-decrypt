@@ -64,6 +64,7 @@ const postEncryptionOperations = async ({ encrytionParameters, setEncryptionPara
   const { algorithm, IV, key } = encrytionParameters;
   const exportedKey = await EncryptionService.exportKeyAsJWT(key);
   downloadEncryptionFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
+  console.warn("Zip: ", zip);
   zip.generateAsync({ type: "base64" }).then(content => {
     const URI = "data:application/zip;base64," + content;
     DownloadService.downloadURI(URI, `encrypted-${Date.now()}.zip`);
