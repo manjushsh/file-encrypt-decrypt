@@ -26,7 +26,7 @@ const DownloadService = {
     link.href = uri;
     link.download = filename;
     link.click();
-    // document.body.removeChild(link);
+    // document.removeChild(link);
   },
   fileToBase64: (file: File): Promise<string> => {
     return new Promise<string>((resolve, reject) => {

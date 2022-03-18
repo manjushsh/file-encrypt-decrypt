@@ -12,9 +12,10 @@ type KeyExportTypes = {
 };
 
 type PostEncryptDecryptTypes = {
-    encrytionParameters: any, 
+    encrytionParameters: any,
     setEncryptionParameters: any,
-    zip: JSZip
+    zip: JSZip;
+    setZipObject: any;
 };
 
 interface FileEncryptDecryptType {

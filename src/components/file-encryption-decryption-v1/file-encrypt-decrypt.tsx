@@ -51,11 +51,12 @@ const downloadEncryptionFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
   DownloadService.downloadBlob(JSONBlob, `key-${dateNow}.json`);
 }
 
-const encryptionOperations = async ({ file, encrytionParameters, zip }: any) => {
+const encryptionOperations = async ({ file, zipObject, setZipObject, encrytionParameters }: any) => {
   const { algorithm, IV, key } = encrytionParameters;
   const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
   const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
-  zip.file(file.name, blob);
+  zipObject.file(file.name, blob);
+  setZipObject(zipObject);
 };
 
 const postEncryptionOperations = async ({ encrytionParameters, setEncryptionParameters, zip }: PostEncryptDecryptTypes) => {
@@ -63,34 +64,36 @@ const postEncryptionOperations = async ({ encrytionParameters, setEncryptionPara
   const { algorithm, IV, key } = encrytionParameters;
   const exportedKey = await EncryptionService.exportKeyAsJWT(key);
   downloadEncryptionFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
-  zip.generateAsync({type: "base64", compression: "DEFLATE"}).then(content => {
-    window.location.href = "data:application/zip;base64," + content;
+  zip.generateAsync({ type: "base64" }).then(content => {
+    const URI = "data:application/zip;base64," + content;
+    DownloadService.downloadURI(URI, `encrypted-${Date.now()}.zip`);
   });
 }
 
-const decryptionOperations = async ({ file, iv, encrytionParameters, zip }: any) => {
+const decryptionOperations = async ({ file, iv, encrytionParameters, zip, setZipObject }: any) => {
   const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
   const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, encrytionParameters.key);
   const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
   zip.file(fileName, blob);
-  return zip;
-  // DownloadService.downloadBlob(blob, `${fileName}`);
+  setZipObject(zip);
 }
 
 const postDecryptionOperations = async ({ encrytionParameters, setEncryptionParameters, zip }: PostEncryptDecryptTypes) => {
   setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: false, keyFileUploaded: false });
-  await zip.generateAsync({type: "base64", compression: "DEFLATE"}).then(content => {
-    window.location.href = "data:application/zip;base64," + content;
+  await zip.generateAsync({
+    type: "base64"
+  }).then(content => {
+    const URI = "data:application/zip;base64," + content;
+    DownloadService.downloadURI(URI, `decrypted-${Date.now()}.zip`);
   });
 }
 
-const pickFile = ({ isMulti = true, acceptTypes = "*", type = 'encrypt', encrytionParameters, setEncryptionParameters }: any) => {
+const pickFile = ({ isMulti = true, acceptTypes = "*", type = 'encrypt', encrytionParameters, zipObject, setZipObject, setEncryptionParameters }: any) => {
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = isMulti;
   input.accept = acceptTypes;
   input.onchange = async (e) => {
-    const zip = new JSZip();
     e.preventDefault();
     // getting a hold of the file reference
     const files = Array.from((e.target as HTMLInputElement)?.files!);
@@ -99,17 +102,17 @@ const pickFile = ({ isMulti = true, acceptTypes = "*", type = 'encrypt', encryti
         case "encrypt":
           setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true, });
           files.forEach(async (file) => {
-            await encryptionOperations({ file, encrytionParameters, zip });
+            await encryptionOperations({ file, encrytionParameters, zipObject, setZipObject });
           });
-          await postEncryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
+          await postEncryptionOperations({ encrytionParameters, zip: zipObject, setZipObject, setEncryptionParameters });
           break;
         case "decrypt":
           const iv: any = encrytionParameters.iv || encrytionParameters.IV;
           setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
           files.forEach(async (file) => {
-            await decryptionOperations({ file, iv, encrytionParameters, zip });
+            await decryptionOperations({ file, iv, encrytionParameters, zip: zipObject, setZipObject });
           });
-          await postDecryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
+          await postDecryptionOperations({ encrytionParameters, setEncryptionParameters, zip: zipObject, setZipObject });
           break;
       }
     }
@@ -118,10 +121,9 @@ const pickFile = ({ isMulti = true, acceptTypes = "*", type = 'encrypt', encryti
 };
 
 // Drag and Drop Events. MDN Ref: https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
-const dropHandler = async (ev: any, type: string, encrytionParameters: any, setEncryptionParameters: any) => {
+const dropHandler = async (ev: any, type: string, encrytionParameters: any, setEncryptionParameters: any, zipObject: any, setZipObject: any) => {
   ev.preventDefault();
-  if (ev.dataTransfer.items) {
-    const zip = new JSZip();
+  if (ev?.dataTransfer?.items) {
     // Use DataTransferItemList interface to access the file(s)
     switch (type) {
       case "encrypt":
@@ -131,25 +133,27 @@ const dropHandler = async (ev: any, type: string, encrytionParameters: any, setE
             // If dropped items aren't files, reject them
             if (ev.dataTransfer.items[i].kind === "file") {
               const file = ev.dataTransfer.items[i].getAsFile();
-              await encryptionOperations({ file, encrytionParameters, setEncryptionParameters, zip });
+              await encryptionOperations({ file, encrytionParameters, setEncryptionParameters, zip: zipObject });
             }
           }
         }
-        await postEncryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
+        await postEncryptionOperations({ encrytionParameters, setEncryptionParameters, zip: zipObject, setZipObject });
         break;
       case "decrypt":
         // setEncryptionParameters({ algorithm: null, IV: null, key: null, });
         const iv: any = encrytionParameters.iv || encrytionParameters.IV;
         if (encrytionParameters.key && iv) {
           setEncryptionParameters({ ...encrytionParameters, fileEncryptionLoader: true });
-          for (let i = 0; i < ev.dataTransfer.items.length; i++) {
-            // If dropped items aren't files, reject them
-            if (ev.dataTransfer.items[i].kind === "file") {
-              const file = ev.dataTransfer.items[i].getAsFile();
-              await decryptionOperations({ file, iv, encrytionParameters, setEncryptionParameters, zip });
+          if (ev?.dataTransfer?.files) {
+            for (let i = 0; i < ev.dataTransfer.items.length; i++) {
+              // If dropped items aren't files, reject them
+              if (ev.dataTransfer.items[i].kind === "file") {
+                const file = ev.dataTransfer.items[i].getAsFile();
+                await decryptionOperations({ file, iv, encrytionParameters, setEncryptionParameters, zip: zipObject });
+              }
             }
           }
-          await postDecryptionOperations({ encrytionParameters, setEncryptionParameters, zip });
+          await postDecryptionOperations({ encrytionParameters, setEncryptionParameters, zip: zipObject, setZipObject });
         }
         break;
       case "key-file":
@@ -209,6 +213,8 @@ const FileEncryptDecrypt = () => {
     setEncryptionParameters({ algorithm, IV, key, keyFile: null });
   };
 
+  const [zipObject, setZipObject] = useState(new JSZip());
+
   return (
     <>
       <div className="file-ed-container dark">
@@ -219,10 +225,10 @@ const FileEncryptDecrypt = () => {
               className="encrypt"
               onDrop={(e) => {
                 e.preventDefault();
-                dropHandler(e, "encrypt", encrytionParameters, setEncryptionParameters);
+                dropHandler(e, "encrypt", encrytionParameters, setEncryptionParameters, zipObject, setZipObject);
               }}
               onDragOver={dragOverHandler}
-              onClick={() => pickFile({ isMulti: true, encrytionParameters, setEncryptionParameters })}
+              onClick={() => pickFile({ isMulti: true, encrytionParameters, zipObject, setZipObject, setEncryptionParameters })}
             >
               {!encrytionParameters.fileEncryptionLoader ? (
                 <p className="file-title">
@@ -243,9 +249,10 @@ const FileEncryptDecrypt = () => {
               className="decrypt"
               onDrop={(e) => {
                 e.preventDefault();
-                dropHandler(e, "decrypt", encrytionParameters, setEncryptionParameters);
+                dropHandler(e, "decrypt", encrytionParameters, setEncryptionParameters, zipObject, setZipObject);
               }}
               onDragOver={dragOverHandler}
+              onClick={() => pickFile({ isMulti: true, type: "decrypt", encrytionParameters, zipObject, setZipObject, setEncryptionParameters })}
             >
               <p className="file-title">
                 {"Drag and drop a file here start Decryption ..."}
@@ -260,12 +267,7 @@ const FileEncryptDecrypt = () => {
             className="key-file"
             onDrop={(e) => {
               e.preventDefault();
-              dropHandler(
-                e,
-                "key-file",
-                encrytionParameters,
-                setEncryptionParameters
-              );
+              dropHandler(e, "key-file", encrytionParameters, setEncryptionParameters, zipObject, setZipObject);
             }}
             onDragOver={dragOverHandler}
           >

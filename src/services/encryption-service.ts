@@ -8,20 +8,31 @@ const EncryptionService = {
         return { algorithm, IV, key };
     },
     encryptFileUsingAlgorithm: async (fileAsArrayBuffer: any, algorithm: algorithmObject, IV: Uint8Array, key: CryptoKey) => {
-        const encryptionResult = await crypto.subtle.encrypt(algorithm, key, fileAsArrayBuffer);
-        return { blob: new Blob([encryptionResult]), iv: IV.toString() };
+        try {
+            const encryptionResult = await crypto.subtle.encrypt(algorithm, key, fileAsArrayBuffer);
+            return { blob: new Blob([encryptionResult]), iv: IV.toString() };
+        }
+        catch (error) {
+            console.error("Error while encrypting.", error);
+            return { blob: new Blob() };
+        }
     },
     exportKeyAsJWT: async (key: CryptoKey) => await crypto.subtle.exportKey("jwk", key),
-    decryptUploadedFile: async (encryptedBlobData: any, ivData: any, key: any, algorithmType = "AES-GCM") => {
+    decryptUploadedFile: async (encryptedBlobData: ArrayBuffer, ivData: any, key: any, algorithmType = "AES-GCM") => {
         const importedKey = await crypto.subtle.importKey("jwk", key, { name: algorithmType }, true, ["encrypt", "decrypt"]);
         let IV: Uint8Array = new Uint8Array(ivData.split(","));
         const algorithm: algorithmObject = { name: algorithmType, iv: IV };
-        const decryptedData: ArrayBuffer = await crypto.subtle.decrypt(
-            algorithm,
-            importedKey,
-            encryptedBlobData
-        );
-        return new Blob([decryptedData]);
+        try {
+            const decryptedData: ArrayBuffer = await crypto.subtle.decrypt(
+                algorithm,
+                importedKey,
+                encryptedBlobData
+            );
+            return new Blob([decryptedData]);
+        }
+        catch (error) {
+            console.error("Error while decrypting. Error details: ", error);
+        }
     },
     fileToJSON: async (file: any) => {
         return new Promise((resolve, reject) => {
