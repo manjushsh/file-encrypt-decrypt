@@ -39,16 +39,17 @@ const FileEncryptDecrypt = () => {
     setState({ type });
     const files = ev?.dataTransfer?.items;
     if (files?.length) {
+      zip = resetZip();
       // Use DataTransferItemList interface to access the file(s)
       switch (type) {
         case ENCRYPT:
-          Array.from(files).forEach(async item => {
+          for (let item of Array.from(files)) {
             if (item.kind === "file") {
               const file = item.getAsFile()!;
               await encryptionOperations({ file, state, setState });
               // DownloadService.downloadBlob(blob, `encrypted-${file.name}`);
             }
-          });
+          }
           setState({ fileEncryptionLoader: false, keyFileUploaded: false });
           const { algorithm, IV, key } = state;
           const exportedKey = await EncryptionService.exportKeyAsJWT(key);
@@ -56,7 +57,6 @@ const FileEncryptDecrypt = () => {
           await zip.generateAsync({ ...ConfigService.ZIP_CONFIG, type: "base64" }).then(content => {
             window.location.href = "data:application/zip;base64," + content;
           });
-          zip = resetZip();
           break;
         case DECRYPT:
           const iv: any = state.iv || state.IV;
@@ -90,6 +90,7 @@ const FileEncryptDecrypt = () => {
     if (files?.length) {
       switch (type) {
         case ENCRYPT:
+          zip = resetZip();
           for (let file of Array.from(files)) {
             await encryptionOperations({ file, state, setState });
           }

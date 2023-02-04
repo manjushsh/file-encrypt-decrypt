@@ -55,6 +55,7 @@ export const decryptionOperations = async ({ file, state, setState }: any) => {
       alert(
         "Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file."
       );
+      window.location.reload();
     }
   }
   
