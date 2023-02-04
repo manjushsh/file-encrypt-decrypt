@@ -1,0 +1,36 @@
+.en-decr-container {
+    width: 100%;
+    height: 100vh;
+    cursor: pointer;
+}
+
+.encrypt-file-container {
+    height: 50vh;
+    background-color: rgb(0, 129, 201);
+}
+
+.decrypt-file-container {
+    height: 50vh;
+    background-color: rgb(36, 55, 99);
+}
+
+.go-back-container{
+    height: 50vh;
+    background-color: rgb(36, 55, 99);
+}
+
+.file-title {
+    color: rgba(255, 255, 255, .8);
+}
+
+.file-title > h1{
+    margin: 0;
+}
+
+.centered{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
