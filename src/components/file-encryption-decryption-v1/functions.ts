@@ -38,6 +38,7 @@ export const decryptionOperations = async ({ file, state, setState }: any) => {
     const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
     DownloadService.downloadBlob(blob, `${fileName}`);
     setState({ fileEncryptionLoader: false });
+    window.alert("Files are Decrypted and downloaded.");
   }
   
   export const keyFileOperations = async ({ file, state, setState }: any) => {

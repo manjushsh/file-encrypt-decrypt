@@ -100,6 +100,7 @@ const FileEncryptDecrypt = () => {
           downloadFiles({ algorithm, iv: String(IV).toString(), key: exportedKey });
           zip.generateAsync({ ...ConfigService.ZIP_CONFIG, type: "base64" }).then(content => {
             window.location.href = "data:application/zip;base64," + content;
+            window.alert("Files are Encrypted and downloaded.");
           });
           break;
         case DECRYPT:
