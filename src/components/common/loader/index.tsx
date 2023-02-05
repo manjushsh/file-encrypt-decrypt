@@ -1,4 +1,4 @@
-import '../../css/loader.css';
+import './style.css';
 
 const BarLoader = () => <div className='loader'>Loading...</div>;
 
