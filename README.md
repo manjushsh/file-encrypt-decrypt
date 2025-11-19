@@ -17,10 +17,10 @@ Encrypt and Decrypt your files easily!
 git clone https://github.com/manjushsh/file-encrypt-decrypt.git
 ```
 
-- Start Server
+- Start App
 
 ```bash
 cd file-encrypt-decrypt
-npm install
-npm start
+pnpm install
+pnpm dev
 ```
