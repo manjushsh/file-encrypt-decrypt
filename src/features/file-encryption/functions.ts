@@ -102,7 +102,10 @@ export const keyFileOperations = async ({ file, state, setState }: FileOperation
         }
     } catch (error) {
         console.error('Key file processing failed:', error);
-        alert(error instanceof Error ? error.message : 'Failed to process key file');
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process key file';
+        alert(errorMessage);
+        // Reset to initial state on error
+        setState({ keyFileUploaded: false, keyFile: null });
     }
 }
 
@@ -110,14 +113,26 @@ export const keyFileOperations = async ({ file, state, setState }: FileOperation
  * Handles JSON key file validation and state update
  */
 const handleJsonKeyFile = async (file: File, setState: (payload: any) => void): Promise<void> => {
-    const data = await EncryptionService.fileToJSON(file);
-    const keyFile = JSON.parse(data as string);
-    
-    if (!keyFile.iv || !keyFile.key) {
-        throw new Error('Invalid key file: missing required fields (iv, key)');
+    try {
+        const data = await EncryptionService.fileToJSON(file);
+        const keyFile = JSON.parse(data as string);
+        
+        if (!keyFile.iv || !keyFile.key) {
+            throw new Error('Invalid key file: missing required fields (iv, key)');
+        }
+        
+        if (!keyFile.algorithm) {
+            // Add default algorithm if missing for backward compatibility
+            keyFile.algorithm = 'AES-GCM';
+        }
+        
+        setState({ ...keyFile, keyFileUploaded: true });
+    } catch (error) {
+        if (error instanceof SyntaxError) {
+            throw new Error('Invalid JSON format in key file');
+        }
+        throw error;
     }
-    
-    setState({ ...keyFile, keyFileUploaded: true });
 }
   
 /**
