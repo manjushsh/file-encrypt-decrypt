@@ -6,11 +6,7 @@ import EncryptionService from '../services/encryption-service';
 import { DynamicObject } from './types'
 
 // ** Defaults
-const defaultProvider: DynamicObject = {
-  userDetails: {
-    name: window?.location?.hash || null,
-  }
-};
+const defaultProvider: DynamicObject = {};
 
 const GlobalStateContext = createContext(defaultProvider)
 
