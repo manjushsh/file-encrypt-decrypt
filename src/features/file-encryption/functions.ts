@@ -3,7 +3,15 @@ import ConfigService from "../../services/config-service";
 import DownloadService from "../../services/download-service";
 import EncryptionService from "../../services/encryption-service";
 import { KeyExportTypes } from "../../types";
+import { FileOperationParams } from "./index.d";
+
 const { QRCode } = window;
+
+// Constants
+const QR_CODE_ELEMENT_ID = 'qrcode';
+const ENCRYPTED_FILE_PREFIX = 'encrypted-';
+const QRCODE_KEY_PREFIX = 'qrcode-key';
+const FILE_TYPE_JSON = 'application/json';
 
 export const getNewQRCodeObject = () => {
     const name = "qrcode";
@@ -13,61 +21,130 @@ export const getNewQRCodeObject = () => {
     });
 }
 
-export const commonFileOperations = async (file: File) => {
-    const blobOfFile: Blob = new Blob([file]);
-    const arrayBuffer: ArrayBuffer = await blobOfFile.arrayBuffer();
-    return arrayBuffer;
+/**
+ * Converts a File to ArrayBuffer for encryption/decryption operations
+ */
+export const fileToArrayBuffer = async (file: File): Promise<ArrayBuffer> => {
+    return await file.arrayBuffer();
 }
 
-export const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
-    const JSONToExport = JSON.stringify({ algorithm, iv, key: key });
-    const dateNow = Date.now();
-    const QR_CODE = getNewQRCodeObject();
-    QR_CODE.makeCode(JSONToExport);
-    const dataUrl = document.getElementById('qrcode')?.querySelector('canvas')?.toDataURL() || '';
-    DownloadService.downloadURI(dataUrl, `qrcode-key-${dateNow}`);
-    const JSONBlob: Blob = new Blob([JSONToExport], { type: "application/json" });
-    DownloadService.downloadBlob(JSONBlob, `key-${dateNow}.json`);
+/**
+ * Downloads encryption key as both QR code image and JSON file
+ */
+export const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes): void => {
+    try {
+        const keyData = { algorithm, iv, key };
+        const jsonString = JSON.stringify(keyData);
+        const timestamp = Date.now();
+        
+        // Generate and download QR code
+        const qrCode = getNewQRCodeObject();
+        qrCode.makeCode(jsonString);
+        
+        const qrElement = document.getElementById(QR_CODE_ELEMENT_ID);
+        const canvas = qrElement?.querySelector('canvas');
+        const dataUrl = canvas?.toDataURL();
+        
+        if (dataUrl) {
+            DownloadService.downloadURI(dataUrl, `${QRCODE_KEY_PREFIX}-${timestamp}`);
+        }
+        
+        // Download JSON key file
+        const jsonBlob = new Blob([jsonString], { type: FILE_TYPE_JSON });
+        DownloadService.downloadBlob(jsonBlob, `key-${timestamp}.json`);
+    } catch (error) {
+        console.error('Error downloading key files:', error);
+        throw new Error('Failed to download encryption key files');
+    }
 }
   
-export const decryptionOperations = async ({ file, state, setState }: any) => {
-    const iv: any = state.iv || state.IV;
-    setState({ fileEncryptionLoader: true });
-    const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
-    const blob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, state.key);
-    const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
-    DownloadService.downloadBlob(blob, `${fileName}`);
-    setState({ fileEncryptionLoader: false });
-  }
+/**
+ * Decrypts an encrypted file and triggers download
+ */
+export const decryptionOperations = async ({ file, state, setState }: FileOperationParams): Promise<void> => {
+    try {
+        const iv = state.iv || state.IV;
+        
+        if (!iv || !state.key) {
+            throw new Error('Missing encryption key or initialization vector');
+        }
+        
+        setState({ fileEncryptionLoader: true });
+        
+        const arrayBuffer = await fileToArrayBuffer(file);
+        const decryptedBlob = await EncryptionService.decryptUploadedFile(arrayBuffer, iv, state.key);
+        
+        // Remove 'encrypted-' prefix if present
+        const fileName = file.name.startsWith(ENCRYPTED_FILE_PREFIX) 
+            ? file.name.replace(new RegExp(`^${ENCRYPTED_FILE_PREFIX}`, 'i'), '') 
+            : file.name;
+        
+        DownloadService.downloadBlob(decryptedBlob, fileName);
+    } catch (error) {
+        console.error('Decryption failed:', error);
+        throw error;
+    } finally {
+        setState({ fileEncryptionLoader: false });
+    }
+}
   
-  export const keyFileOperations = async ({ file, state, setState }: any) => {
-    if (file.type === "application/json") {
-      const data: any = await EncryptionService.fileToJSON(file);
-      const keyFile = JSON.parse(data);
-      if (keyFile.iv && keyFile.key)
-        setState({ ...keyFile, keyFileUploaded: true });
-      else alert("Uploaded JSON is not an valid key file!");
+/**
+ * Validates and processes uploaded key file (JSON or QR code image)
+ */
+export const keyFileOperations = async ({ file, state, setState }: FileOperationParams): Promise<void> => {
+    try {
+        if (file.type === FILE_TYPE_JSON) {
+            await handleJsonKeyFile(file, setState);
+        } else if (file.name.startsWith(QRCODE_KEY_PREFIX)) {
+            await scanImageQR(file, setState);
+        } else {
+            throw new Error('Invalid key file format. Please upload a JSON key file or QR code image.');
+        }
+    } catch (error) {
+        console.error('Key file processing failed:', error);
+        alert(error instanceof Error ? error.message : 'Failed to process key file');
     }
-    else if (file.name.startsWith('qrcode-key')) {
-      scanImageQR(file, setState);
+}
+
+/**
+ * Handles JSON key file validation and state update
+ */
+const handleJsonKeyFile = async (file: File, setState: (payload: any) => void): Promise<void> => {
+    const data = await EncryptionService.fileToJSON(file);
+    const keyFile = JSON.parse(data as string);
+    
+    if (!keyFile.iv || !keyFile.key) {
+        throw new Error('Invalid key file: missing required fields (iv, key)');
     }
-    else {
-      alert(
-        "Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file."
-      );
-      window.location.reload();
-    }
-  }
+    
+    setState({ ...keyFile, keyFileUploaded: true });
+}
   
-  export const scanImageQR = async (imageFile: File, setState: any) => {
-    const base64 = await DownloadService.fileToBase64(imageFile);
-    QrScanner.scanImage(base64, {
-      alsoTryWithoutScanRegion: true,
-      returnDetailedScanResult: true,
-    })
-      .then(result => {
-        const keyFile = JSON.parse(result?.data);
+/**
+ * Scans QR code from image file and extracts encryption key
+ */
+export const scanImageQR = async (imageFile: File, setState: (payload: any) => void): Promise<void> => {
+    try {
+        const base64 = await DownloadService.fileToBase64(imageFile);
+        
+        const result = await QrScanner.scanImage(base64, {
+            alsoTryWithoutScanRegion: true,
+            returnDetailedScanResult: true,
+        });
+        
+        if (!result?.data) {
+            throw new Error('No QR code found in image');
+        }
+        
+        const keyFile = JSON.parse(result.data);
+        
+        if (!keyFile.iv || !keyFile.key) {
+            throw new Error('Invalid QR code: missing encryption key data');
+        }
+        
         setState({ ...keyFile, keyFileUploaded: true });
-      })
-      .catch(error => console.log(error || 'No QR code found.'));
-  };
+    } catch (error) {
+        console.error('QR code scanning failed:', error);
+        throw new Error('Failed to scan QR code. Please ensure the image contains a valid encryption key QR code.');
+    }
+}

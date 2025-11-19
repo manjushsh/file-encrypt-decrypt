@@ -1,6 +1,6 @@
 import { DragEvent } from "react";
 
-export interface EncryptionOperationsParams {
+export interface FileOperationParams {
   file: File;
   state: any;
   setState: (payload: any) => void;

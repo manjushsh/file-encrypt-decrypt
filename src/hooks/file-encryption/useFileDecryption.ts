@@ -1,8 +1,7 @@
 import { useCallback } from "react";
-import { startTransition } from "react";
 import { decryptionOperations } from "../../features/file-encryption/functions";
 
-export const useFileDecryption = (state: any, setState: any, setOptimisticLoading: any) => {
+export const useFileDecryption = (state: any, setState: any) => {
   const handleDecryptFiles = useCallback(async (files: File[]) => {
     const iv = state.iv || state.IV;
     if (!state.key || !iv) {
@@ -10,18 +9,10 @@ export const useFileDecryption = (state: any, setState: any, setOptimisticLoadin
       return;
     }
 
-    startTransition(() => {
-      setOptimisticLoading(true);
-    });
-
     for (const file of files) {
       await decryptionOperations({ file, state, setState });
     }
-
-    startTransition(() => {
-      setOptimisticLoading(false);
-    });
-  }, [state, setState, setOptimisticLoading]);
+  }, [state, setState]);
 
   return { handleDecryptFiles };
 };

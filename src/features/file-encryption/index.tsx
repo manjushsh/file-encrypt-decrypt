@@ -1,4 +1,4 @@
-import { use, useEffect, useOptimistic, Activity } from "react";
+import { use, useEffect, Activity } from "react";
 import { ActivityStatates, ENCRYPT, GlobalStateContext } from "../../context/GlobalStateContext";
 import EncryptionService from "../../services/encryption-service";
 import { useFileEncryption } from "../../hooks/file-encryption/useFileEncryption";
@@ -19,12 +19,9 @@ declare global {
 
 const FileEncryptDecrypt = () => {
   const { state, setState, resetState } = use(GlobalStateContext);
-  const [optimisticLoading, setOptimisticLoading] = useOptimistic(
-    state?.fileEncryptionLoader || false
-  );
 
-  const { handleEncryptFiles } = useFileEncryption(state, setState, setOptimisticLoading);
-  const { handleDecryptFiles } = useFileDecryption(state, setState, setOptimisticLoading);
+  const { handleEncryptFiles } = useFileEncryption(state, setState);
+  const { handleDecryptFiles } = useFileDecryption(state, setState);
   const { handleKeyFile } = useKeyFile(state, setState);
   
   const { dropHandler, fileSelectHandler } = useFileHandlers({

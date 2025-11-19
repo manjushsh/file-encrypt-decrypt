@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import JSZip from 'jszip';
 import EncryptionService from "../../services/encryption-service";
 import ConfigService from "../../services/config-service";
-import { commonFileOperations, downloadFiles } from "../../features/file-encryption/functions";
+import { fileToArrayBuffer, downloadFiles } from "../../features/file-encryption/functions";
 
 let zip = new JSZip();
 
@@ -14,13 +14,13 @@ function resetZip() {
 
 export const encryptionOperations = async ({ file, state, setState }: any) => {
   const { algorithm, IV, key } = state;
-  const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
+  const arrayBuffer: ArrayBuffer = await fileToArrayBuffer(file);
   setState({ fileEncryptionLoader: true });
   const { blob } = await EncryptionService.encryptFileUsingAlgorithm(arrayBuffer, algorithm, IV, key);
   zip = zip.file(`encrypted-${file.name}`, blob);
 }
 
-export const useFileEncryption = (state: any, setState: any, setOptimisticLoading: any) => {
+export const useFileEncryption = (state: any, setState: any) => {
   const handleEncryptFiles = useCallback(async (files: File[]) => {
     zip = resetZip();
 
