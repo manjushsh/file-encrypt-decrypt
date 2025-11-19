@@ -1,11 +1,9 @@
-import { Activity } from "react";
-import { ActivityStatates, KEY_FILE } from "../../../context/GlobalStateContext";
+import { KEY_FILE } from "../../../context/GlobalStateContext";
 import FileUploader from "../../../components/common/file-upload";
 import { EncryptDecryptLandingProps } from "../index.d";
 
 export const KeyFileZone = ({ dropHandler, filePickHandler }: Omit<EncryptDecryptLandingProps, 'children'>) => {
   return (
-    <Activity mode={ActivityStatates.VISIBLE}>
       <div className="decrypt-file-container">
         <FileUploader
           dropHandler={dropHandler}
@@ -14,6 +12,5 @@ export const KeyFileZone = ({ dropHandler, filePickHandler }: Omit<EncryptDecryp
           message="Drag and drop or select key file to start Decryption"
         />
       </div>
-    </Activity>
   );
 };

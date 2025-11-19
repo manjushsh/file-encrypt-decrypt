@@ -1,5 +1,4 @@
-import { Activity } from "react";
-import { ActivityStatates, ENCRYPT } from "../../../context/GlobalStateContext";
+import { ENCRYPT } from "../../../context/GlobalStateContext";
 import FileUploader from "../../../components/common/file-upload";
 import { EncryptDecryptLandingProps } from "../index.d";
 
