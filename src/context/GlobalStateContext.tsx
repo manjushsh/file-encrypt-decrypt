@@ -47,3 +47,8 @@ export { GlobalStateContext, GlobalStateProvider }
 export const ENCRYPT = 'encrypt';
 export const DECRYPT = 'decrypt';
 export const KEY_FILE = 'key-file'
+
+export enum ActivityStatates {
+  VISIBLE = 'visible',
+  HIDDEN = 'hidden'
+}

@@ -1,4 +1,4 @@
-import FileEncryptDecrypt from '../components/file-encryption-decryption-v1';
+import FileEncryptDecrypt from '../features/file-encryption';
 import '../css/App.css';
 
 function App() {
