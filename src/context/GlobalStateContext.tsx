@@ -26,7 +26,10 @@ const GlobalStateProvider = ({ children }: Props) => {
       .then(data => {
         updateState({ ...data });
       })
-      .catch(err => window.alert(`Oops! Error: ${err?.message}`));
+      .catch(err => {
+        updateState({ error: `Oops! Error: ${err?.message}` });
+        console.error('Encryption service error:', err);
+      });
   };
 
   const values = {

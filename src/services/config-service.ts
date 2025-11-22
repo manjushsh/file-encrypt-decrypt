@@ -14,4 +14,9 @@ const ConfigService = {
   },
 };
 
+export enum ActivityStates {
+  VISIBLE = "visible",
+  HIDDEN = "hidden",
+}
+
 export default ConfigService;
