@@ -30,7 +30,7 @@ export const downloadFiles = ({ algorithm, iv, key }: KeyExportTypes) => {
     DownloadService.downloadBlob(JSONBlob, `key-${dateNow}.json`);
 }
   
-export const decryptionOperations = async ({ file, state, setState }: any) => {
+export const decryptionOperations = async ({ file, state, setState }: any, showToast?: any) => {
     const iv: any = state.iv || state.IV;
     setState({ fileEncryptionLoader: true });
     const arrayBuffer: ArrayBuffer = await commonFileOperations(file);
@@ -38,37 +38,70 @@ export const decryptionOperations = async ({ file, state, setState }: any) => {
     const fileName = file?.name?.startsWith("encrypted") ? file.name.replace(/encrypted-/i, "") : file.name;
     DownloadService.downloadBlob(blob, `${fileName}`);
     setState({ fileEncryptionLoader: false });
-    window.alert("Files are Decrypted and downloaded.");
+    if (showToast) {
+      showToast("Files are decrypted and downloaded successfully.", "success");
+    }
   }
   
-  export const keyFileOperations = async ({ file, setState }: any) => {
+export const keyFileOperations = async ({ file, setState }: any, showToast?: any) => {
+  try {
     if (file.type === "application/json") {
       const data: any = await EncryptionService.fileToJSON(file);
       const keyFile = JSON.parse(data);
-      if (keyFile.iv && keyFile.key)
+      if (keyFile.iv && keyFile.key && keyFile.algorithm) {
         setState({ ...keyFile, keyFileUploaded: true });
-      else alert("Uploaded JSON is not an valid key file!");
+      } else {
+        if (showToast) {
+          showToast("Uploaded JSON is not a valid key file! Missing required fields (iv, key, algorithm).", "error");
+        }
+        // Reset the file input to allow re-selection
+        setState({ keyFileUploaded: false });
+      }
     }
     else if (file.name.startsWith('qrcode-key')) {
-      scanImageQR(file, setState);
+      scanImageQR(file, setState, showToast);
     }
     else {
-      alert(
-        "Uploaded file is not a valid key file. Please check file and reupload again. It should be an JSON file."
-      );
-      window.location.reload();
+      if (showToast) {
+        showToast(
+          "Uploaded file is not a valid key file. Please upload a JSON file or QR code image.",
+          "error"
+        );
+      }
+      // Reset the file input instead of reloading
+      setState({ keyFileUploaded: false });
     }
+  } catch (error) {
+    console.error('Error processing key file:', error);
+    if (showToast) {
+      showToast("Failed to read key file. Please check the file format and try again.", "error");
+    }
+    setState({ keyFileUploaded: false });
   }
-  
-  export const scanImageQR = async (imageFile: File, setState: any) => {
-    const base64 = await DownloadService.fileToBase64(imageFile);
-    QrScanner.scanImage(base64, {
-      alsoTryWithoutScanRegion: true,
-      returnDetailedScanResult: true,
-    })
-      .then(result => {
-        const keyFile = JSON.parse(result?.data);
+}
+
+export const scanImageQR = async (imageFile: File, setState: any, showToast?: any) => {
+    try {
+      const base64 = await DownloadService.fileToBase64(imageFile);
+      const result = await QrScanner.scanImage(base64, {
+        alsoTryWithoutScanRegion: true,
+        returnDetailedScanResult: true,
+      });
+      
+      const keyFile = JSON.parse(result?.data);
+      if (keyFile.iv && keyFile.key && keyFile.algorithm) {
         setState({ ...keyFile, keyFileUploaded: true });
-      })
-      .catch(error => console.log(error || 'No QR code found.'));
-  };
+      } else {
+        if (showToast) {
+          showToast("QR code does not contain valid key data.", "error");
+        }
+        setState({ keyFileUploaded: false });
+      }
+    } catch (error) {
+      console.error('Error scanning QR code:', error);
+      if (showToast) {
+        showToast("Failed to scan QR code. Please ensure it's a valid SecureFiles key QR code.", "error");
+      }
+      setState({ keyFileUploaded: false });
+    }
+}

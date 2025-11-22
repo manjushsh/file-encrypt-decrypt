@@ -8,14 +8,14 @@ interface EncryptSectionProps {
 
 const EncryptSection = ({ dropHandler, filePickHandler }: EncryptSectionProps) => {
   return (
-    <div className="encrypt-file-container">
+    <section className="encrypt-file-container" aria-label="File encryption">
       <FileUploader
         dropHandler={dropHandler}
         filePickHandler={filePickHandler}
         type={ENCRYPT}
         message="Drag and drop or select file(s) here to start Encryption"
       />
-    </div>
+    </section>
   );
 };
 

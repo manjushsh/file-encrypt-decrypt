@@ -1,6 +1,7 @@
 import { Activity, useContext, useEffect } from "react";
 import { ENCRYPT, GlobalStateContext } from "../../context/GlobalStateContext";
 import EncryptionService from "../../services/encryption-service";
+import ErrorDisplay from "../common/error-display";
 import EncryptDecryptLanding from "./EncryptDecryptLanding";
 import { useFileHandlers } from "./useFileHandlers";
 import './styles.css';
@@ -23,17 +24,25 @@ const FileEncryptDecrypt = () => {
   }, []);
 
   const fetchAndSetParameters = async () => {
-    const { algorithm, IV, key } = await EncryptionService.generateRandomKey();
-    setState({ algorithm, IV, key, keyFile: null });
+    try {
+      const { algorithm, IV, key } = await EncryptionService.generateRandomKey();
+      setState({ algorithm, IV, key, keyFile: null });
+    } catch (error) {
+      console.error('Failed to generate encryption key:', error);
+      setState({ error: 'Failed to initialize encryption. Please reload the page.' });
+    }
   };
 
   return (
-    < Activity mode={!state?.type || (state?.type && state?.type === ENCRYPT) ? ActivityStates.VISIBLE : ActivityStates.HIDDEN} >
+    <>
+      <ErrorDisplay />
+      <Activity mode={!state?.type || (state?.type && state?.type === ENCRYPT) ? ActivityStates.VISIBLE : ActivityStates.HIDDEN} >
         <EncryptDecryptLanding
           dropHandler={dropHandler}
           filePickHandler={fileSelectHandler}
         />
-    </Activity>
+      </Activity>
+    </>
   );
 };
 

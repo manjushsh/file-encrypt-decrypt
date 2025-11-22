@@ -4,13 +4,21 @@ interface GoBackButtonProps {
 
 const GoBackButton = ({ onClick }: GoBackButtonProps) => {
   return (
-    <div className="go-back-container" onClick={onClick}>
+    <button 
+      className="go-back-container" 
+      onClick={onClick}
+      type="button"
+      aria-label="Go back to file selection"
+    >
       <div className="centered">
-        <label className="file-title">
-          <h1>&larr;&ensp;Go Back</h1>
-        </label>
+        <div className="file-title">
+          <h2 className="go-back-heading">
+            <span aria-hidden="true">&larr;</span>
+            <span>Go Back</span>
+          </h2>
+        </div>
       </div>
-    </div>
+    </button>
   );
 };
 

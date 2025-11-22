@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { GlobalStateProvider } from './context/GlobalStateContext';
+import ErrorBoundary from './components/common/error-boundary';
 import './css/index.css';
 
 const container = document.getElementById('root');
@@ -10,9 +11,11 @@ const root = createRoot(container);
 
 root.render(
   <React.StrictMode>
-    <GlobalStateProvider>
-      <App />
-    </GlobalStateProvider>
+    <ErrorBoundary>
+      <GlobalStateProvider>
+        <App />
+      </GlobalStateProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );
 

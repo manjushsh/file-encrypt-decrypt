@@ -1,5 +1,5 @@
 {
-  "name": "file-encrypt-decrypt-v2",
+  "name": "securefiles",
   "version": "0.1.0",
   "private": true,
   "type": "module",

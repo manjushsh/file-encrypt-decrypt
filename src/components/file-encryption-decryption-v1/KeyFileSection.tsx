@@ -8,14 +8,14 @@ interface KeyFileSectionProps {
 
 const KeyFileSection = ({ dropHandler, filePickHandler }: KeyFileSectionProps) => {
   return (
-    <div className="decrypt-file-container">
+    <section className="decrypt-file-container" aria-label="Decryption key file upload">
       <FileUploader
         dropHandler={dropHandler}
         filePickHandler={filePickHandler}
         type={KEY_FILE}
         message="Drag and drop or select key file to start Decryption"
       />
-    </div>
+    </section>
   );
 };
 
