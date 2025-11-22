@@ -36,7 +36,7 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
 
   const showToast = (message: string, type: ToastType = 'info') => {
     try {
-      const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      const id = Date.now().toString() + Math.random().toString(36).slice(2, 11);
       setToasts(prev => [...prev, { id, message, type }]);
     } catch (error) {
       console.error('Failed to show toast:', error);
