@@ -41,7 +41,7 @@ export const decryptionOperations = async ({ file, state, setState }: any) => {
     window.alert("Files are Decrypted and downloaded.");
   }
   
-  export const keyFileOperations = async ({ file, state, setState }: any) => {
+  export const keyFileOperations = async ({ file, setState }: any) => {
     if (file.type === "application/json") {
       const data: any = await EncryptionService.fileToJSON(file);
       const keyFile = JSON.parse(data);
